@@ -19,6 +19,7 @@ library(reshape2)
 #library(gdxrrw)
 library(RMySQL)
 library(data.table)
+library(CVXR)
 
 ESGetf <- c("DSI", "SUSA", "CRBN", "TAN",  "SHE",  "SPYX", "ESGD", "CATH", "ESGG", "EFAX",
 "KRMA", "NUBD", "NUSC", "NULG", "NULV", "NUDM", "NUMG", "NUMV", "RODI", "WIL",
@@ -34,11 +35,11 @@ randomPort_returns <- data.frame(fread('RandomPortfoliosReturns.csv', select = 1
 sqlQuery <- function (query) {
   # creating DB connection object with RMysql package
   DB <- dbConnect(MySQL(),
-                  user = 'XXXXX',
-                  password = 'XXXX',
+                  user = 'X',
+                  password = 'X',
                   host = 'investmentfunneldbinstance.c7kykd0usi6b.us-east-2.rds.amazonaws.com',
                   dbname='investmentfunnel')
-  
+
   # send Query to obtain result set
   rs <- dbSendQuery(DB, query)
   # get elements from result sets and convert to dataframe
@@ -71,8 +72,8 @@ sharpeRatioCalc <- function(x){
   geomAveCalc(x) / sd(x)
 }
 
-circBarPlot <- function(x = c(length(dataMeta$ticker), length(dataSelection$ticker), input$numberOfClusters, input$numberInPortfolio), 
-                        labels = c("Data", "Due Dil.", "Clustering", "Optimization"), 
+circBarPlot <- function(x = c(length(dataMeta$ticker), length(dataSelection$ticker), input$numberOfClusters, input$numberInPortfolio),
+                        labels = c("Data", "Due Dil.", "Clustering", "Optimization"),
                         colors=brewer.pal(length(x), "Blues"), cex.lab=1) {
   plot(0,xlim=c(-1.1,1.1),ylim=c(-1.1,1.1),type="n",axes=F, xlab=NA, ylab=NA)
   radii <- seq(1, 0.3, length.out=length(x))
@@ -86,31 +87,31 @@ circBarPlot <- function(x = c(length(dataMeta$ticker), length(dataSelection$tick
 
 randomPortGen <- function(asset_universe = FALSE, min_assets = 2, max_assets = 10, n_samples = 500, from = 10 ) {
   if (!asset_universe){
-    asset_universe <- sqlQuery(paste0("SELECT DISTINCT symbol FROM metadata WHERE launchDate < CURDATE() - INTERVAL ", 
+    asset_universe <- na.omit(sqlQuery(paste0("SELECT DISTINCT symbol FROM metadata WHERE launchDate < CURDATE() - INTERVAL ",
                                       from,
-                                      " YEAR"))$symbol
+                                      " YEAR"))$symbol)
   }
-  
-  asset_prices <- sqlQuery(paste0("SELECT date AS Date, symbol, adjusted_close AS Price FROM historicaldata WHERE symbol IN ('",
-                                  paste0(asset_universe, collapse = "', '"), "') AND date BETWEEN CURDATE() - INTERVAL ", 
-                                  from, " YEAR AND '2017-10-17'")) %>%
+
+  asset_prices <- na.omit(sqlQuery(paste0("SELECT date AS Date, symbol, adjusted_close AS Price FROM historicaldata WHERE symbol IN ('",
+                                  paste0(asset_universe, collapse = "', '"), "') AND date BETWEEN CURDATE() - INTERVAL ",
+                                  from, " YEAR AND '2017-10-17'"))) %>%
     spread(symbol, Price)
-  
+
   row.names(asset_prices) <- asset_prices$Date
   asset_prices <- asset_prices[,-which(colnames(asset_prices) == 'Date')]
   asset_prices <- asset_prices[, complete.cases(t(asset_prices))]
   asset_universe <- colnames(asset_prices)
-  
+
   port_sizes <- base::sample(min_assets:max_assets, n_samples, replace = TRUE)
   rand_portfolios <- list()
-  
+
   p_names <- sprintf("PP_%02d", 1:n_samples)
-  
+
   for(i in 1:n_samples){
     assets <- base::sample(asset_universe, port_sizes[i])
     rand_portfolios[[p_names[i]]] <- list(assets=assets)
   }
-  
+
   portfolio_returns <- matrix(0L, nrow = dim(asset_prices)[1] - 1, ncol = n_samples, dimnames = list(row.names(asset_prices)[-1], p_names))
   for (i in 1:n_samples){
     temp_assets <- rand_portfolios[[i]]$assets
@@ -121,7 +122,7 @@ randomPortGen <- function(asset_universe = FALSE, min_assets = 2, max_assets = 1
     rand_portfolios[[p_names[i]]]$port_returns <- temp_port_returns
     portfolio_returns[,i] <- temp_port_returns
   }
-  
+
   write.csv(portfolio_returns, 'RandomPortfoliosReturns.csv', row.names = TRUE)
   return(portfolio_returns)
 }
@@ -134,8 +135,8 @@ PortfolioBackTest <- function(assets, asset_weights, asset_prices=NULL, initial_
     # To get around NA's this line is included (should be removed when solution to NAs has been implemened)
     asset_returns <- asset_returns[complete.cases(asset_returns), ]
   }
-  
-  asset_value <- matrix(0L, nrow = dim(asset_returns)[1] + 1, ncol = length(assets), 
+
+  asset_value <- matrix(0L, nrow = dim(asset_returns)[1] + 1, ncol = length(assets),
                         dimnames = list(c(row.names(asset_prices)[1], rownames(asset_returns)), assets))
   asset_value[1,] <- initial_budget * asset_weights
   for (i in 1:dim(asset_returns)[1]){

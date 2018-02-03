@@ -3,8 +3,8 @@ shinyServer(function(input, output) {
   #######################################  Menu #######################################
 
   output$plotAssetData <- renderPlot({
-    tempAssetData <- sqlQuery(paste0("SELECT date AS Date, adjusted_close AS Price
-                                     FROM historicaldata WHERE symbol = '", input$assetSelection, "'"))
+    tempAssetData <- na.omit(sqlQuery(paste0("SELECT date AS Date, adjusted_close AS Price
+                                             FROM historicaldata WHERE symbol = '", input$assetSelection, "'")))
 
     tempAssetData$Date <- as.Date(tempAssetData$Date)
     ggplot(tempAssetData, aes(y = Price, x = Date)) +
@@ -12,10 +12,10 @@ shinyServer(function(input, output) {
   })
 
   output$tableAssetData <- renderTable({
-    assetInfo= sqlQuery(paste0("SELECT m.fund, m.symbol, m.issuer, m.segment, m.expenseRatio, m.category, m.underlyingIndex, p.priceTr1Mo
-                               FROM metadata m
-                               INNER JOIN performancemeasures p ON p.symbol = m.symbol
-                               WHERE m.symbol = '", input$assetSelection, "'")
+    assetInfo= na.omit(sqlQuery(paste0("SELECT m.fund, m.symbol, m.issuer, m.segment, m.expenseRatio, m.category, m.underlyingIndex, p.priceTr1Mo
+                                       FROM metadata m
+                                       INNER JOIN performancemeasures p ON p.symbol = m.symbol
+                                       WHERE m.symbol = '", input$assetSelection, "'"))
     )
   })
 
@@ -37,21 +37,21 @@ shinyServer(function(input, output) {
 
     switch(input$EGSEtfs,
            "FALSE" = {
-             newValueTest <- sqlQuery(paste0("SELECT m.symbol AS ticker FROM metadata m
-                                             INNER JOIN performancemeasures p ON m.symbol = p.symbol
-                                             WHERE m.launchDate BETWEEN CURDATE() - INTERVAL ", input$yearsOfExistence[2],  " YEAR
-                                             AND CURDATE() - INTERVAL ", input$yearsOfExistence[1], " YEAR AND
-                                             m.assetClass IN ('", paste(input$assetClasses,  collapse = "', '"), "') AND
-                                             m.region IN ('", paste(input$assetRegion,  collapse = "', '"), "') AND
-                                             p.priceTr1Yr > ", input$oneYearP[1]/100, " AND
-                                             p.priceTr3YrAnnualized > ", input$threeYearP[1]/100, " AND
-                                             m.leveraged != '", input$leveregedEtfs, "' AND
-                                             m.inverse != '", input$shortEtfs, "'"))
+             newValueTest <- na.omit(sqlQuery(paste0("SELECT m.symbol AS ticker FROM metadata m
+                                                     INNER JOIN performancemeasures p ON m.symbol = p.symbol
+                                                     WHERE m.launchDate BETWEEN CURDATE() - INTERVAL ", input$yearsOfExistence[2],  " YEAR
+                                                     AND CURDATE() - INTERVAL ", input$yearsOfExistence[1], " YEAR AND
+                                                     m.assetClass IN ('", paste(input$assetClasses,  collapse = "', '"), "') AND
+                                                     m.region IN ('", paste(input$assetRegion,  collapse = "', '"), "') AND
+                                                     p.priceTr1Yr > ", input$oneYearP[1]/100, " AND
+                                                     p.priceTr3YrAnnualized > ", input$threeYearP[1]/100, " AND
+                                                     m.leveraged != '", input$leveregedEtfs, "' AND
+                                                     m.inverse != '", input$shortEtfs, "'")))
 
            },
-           "TRUE" = {newValueTest <- sqlQuery(paste0("SELECT m.symbol AS ticker FROM metadata m INNER JOIN performancemeasures p ON m.symbol = p.symbol WHERE m.launchDate BETWEEN CURDATE() - INTERVAL ", input$yearsOfExistence[2],
-                                                     " YEAR AND CURDATE() - INTERVAL ", input$yearsOfExistence[1],
-                                                     " YEAR AND m.symbol IN ('", paste0(ESGetf, collapse = "', '"), "')"))
+           "TRUE" = {newValueTest <- na.omit(sqlQuery(paste0("SELECT m.symbol AS ticker FROM metadata m INNER JOIN performancemeasures p ON m.symbol = p.symbol WHERE m.launchDate BETWEEN CURDATE() - INTERVAL ", input$yearsOfExistence[2],
+                                                             " YEAR AND CURDATE() - INTERVAL ", input$yearsOfExistence[1],
+                                                             " YEAR AND m.symbol IN ('", paste0(ESGetf, collapse = "', '"), "')")))
            }
              )
     newValueTest1 <- data.frame(ticker = setdiff(newValueTest$ticker, c('ADRD', 'ADRE', 'ADRA', 'ADRU')))
@@ -105,10 +105,9 @@ shinyServer(function(input, output) {
 
   observeEvent(input$generateClustering, {
     print('Begin Clustering')
-    clustering$AssetPrices <- sqlQuery(paste0("SELECT date AS Date, symbol, adjusted_close AS Price FROM historicaldata WHERE symbol IN ('",
-                                              paste0(dataSelection()$ticker, collapse = "', '"), "') AND
-                                              Date < CURDATE() - INTERVAL ", input$backtestYears ," YEAR")) %>%
-      spread(symbol, Price)
+    clustering$AssetPrices <- na.omit(sqlQuery(paste0("SELECT date AS Date, symbol, adjusted_close AS Price FROM historicaldata WHERE symbol IN ('",
+                                                      paste0(dataSelection()$ticker, collapse = "', '"), "') AND
+                                                      Date < CURDATE() - INTERVAL ", input$backtestYears ," YEAR"))) %>% spread(symbol, Price)
 
     ### Could dump AssetPrices into AssetReturns Right Away
     row.names(clustering$AssetPrices) <- clustering$AssetPrices[, 1]
@@ -207,23 +206,23 @@ shinyServer(function(input, output) {
     # Depending on input$modelChoices, we'll generate a different
     # UI component and send it to the client.
     switch(input$modelChoices,
-           "MeanVar" = sliderInput("dynamic", "Required Yearly Returns",
-                                   min = 1, max = 20, value = 10, post="%"),
+           "MeanVar" = sliderInput("dynamic", "Gamma (Risk aversion parameter. Gamma = 100% is risk-averse investor) ",
+                                   min = 0, max = 100, value = 50, post="%"),
            "VaR" = radioButtons("dynamic2", "Confidence Level",
                                 choices = c("90%" = "option1",
                                             "95%" = "option2",
                                             "99%" = "option3"),
                                 selected = "option2"
-           ),
-           "CVaR" =  radioButtons("dynamic", "Confidence Level",
-                                  choices = c("90%" = "option1",
-                                              "95%" = "option2",
-                                              "99%" = "option3"),
-                                  selected = "option2"
-           ),
+           )#,
+           #"CVaR" =  radioButtons("dynamic", "Confidence Level",
+            #                      choices = c("90%" = "option1",
+              #                                "95%" = "option2",
+                 #                             "99%" = "option3"),
+                     #             selected = "option2"
+           #),
 
-           "EWS" = checkboxInput("dynamic", "Dynamic",
-                                 value = TRUE)
+          # "EWS" = checkboxInput("dynamic", "Dynamic",
+                        #         value = TRUE)
     )
   })
 
@@ -237,8 +236,8 @@ shinyServer(function(input, output) {
   observeEvent(input$generateClustering,{
     newClusterPrice <- clustering$AssetPrices[,clustering$Gselect]
     newClusterReturns <- clustering$AssetReturns[,clustering$Gselect]
-    newClusterMeta <- sqlQuery(paste0("SELECT symbol, assetClass AS 'AssetClass', region AS Region, geography AS Geography, focus AS Focus
-                                      FROM metadata WHERE symbol IN ('", paste0(clustering$statsClust$ETF, collapse = "', '"), "')" ) )
+    newClusterMeta <- na.omit(sqlQuery(paste0("SELECT symbol, assetClass AS 'AssetClass', region AS Region, geography AS Geography, focus AS Focus
+                                              FROM metadata WHERE symbol IN ('", paste0(clustering$statsClust$ETF, collapse = "', '"), "')" ) ))
     clusterResultPrice(newClusterPrice)
     clusterResultReturns(newClusterReturns)
     clusterResultMeta(newClusterMeta)
@@ -248,47 +247,47 @@ shinyServer(function(input, output) {
   ## Optimization in R
 
   optimizeVal <- eventReactive(input$optimizeButton, {
-    # print('Begin Optimization')
-    # # Asset Names
-    # outputAssets <- data.frame(Assets = clustering$Gselect)
-    # attr(outputAssets, "symName") <-  "Asset"
-    # attr(outputAssets, "ts") <-  "Set of Assets"
-    #
-    # # Dates
-    # outputDates <-  data.frame(Date = rownames(clusterResultReturns()))
-    # attr(outputDates, "symName") <- "Date"
-    # attr(outputDates, "ts") <- "Set of Dates"
-    #
+    print('Begin Optimization')
+    # Asset Names
+    outputAssets <- data.frame(Assets = clustering$Gselect)
+    attr(outputAssets, "symName") <-  "Asset"
+    attr(outputAssets, "ts") <-  "Set of Assets"
+
+    # Dates
+    outputDates <-  data.frame(Date = rownames(clusterResultReturns()))
+    attr(outputDates, "symName") <- "Date"
+    attr(outputDates, "ts") <- "Set of Dates"
+
     # # Asset Returns
-    # outputAssetReturns <- cbind(Date = rownames(clusterResultReturns()), clusterResultReturns()) %>%
-    #   as.data.frame() %>% gather(Stock, Returns, -Date)
-    # outputAssetReturns$Date <- factor(outputAssetReturns$Date)
-    # outputAssetReturns$Stock <- factor(outputAssetReturns$Stock)
-    # outputAssetReturns$Returns <- as.numeric(outputAssetReturns$Returns)
-    # attr(outputAssetReturns, "symName") <- "AssetReturns"
-    # attr(outputAssetReturns, "domains") <- "c(t, i)"
-    # attr(outputAssetReturns, "ts") <- "Assetreturns of each asset and each day"
-    # print(str(outputAssetReturns))
+    outputAssetReturns <- cbind(Date = rownames(clusterResultReturns()), clusterResultReturns()) %>%
+      as.data.frame() %>% gather(Stock, Returns, -Date)
+    outputAssetReturns$Date <- factor(outputAssetReturns$Date)
+    outputAssetReturns$Stock <- factor(outputAssetReturns$Stock)
+    outputAssetReturns$Returns <- as.numeric(outputAssetReturns$Returns)
+    attr(outputAssetReturns, "symName") <- "AssetReturns"
+    attr(outputAssetReturns, "domains") <- "c(t, i)"
+    attr(outputAssetReturns, "ts") <- "Assetreturns of each asset and each day"
+    print(str(outputAssetReturns))
     #
     # # Expected Returns
-    # tempExpRet <- clusterResultReturns() %>% apply(2, geomAveCalc)
-    # outputExpRet <- data.frame(Asset = names(tempExpRet),ExpectedReturns = tempExpRet, row.names=NULL)
-    # rm(tempExpRet)
-    # attr(outputExpRet, "symName") <-  'ExpectedReturns'
-    # attr(outputExpRet, "domains") <- "i"
-    # attr(outputExpRet, "ts") <- "Expected Returns for each asset"
-    #
-    # # VarCovariance Matrix
-    # tempVarCov <- cov(clusterResultReturns())
-    # outputVarCovMat <- data.frame(cbind(i=rownames(tempVarCov), tempVarCov), row.names = NULL) %>%
-    #   gather(j,value, -i)
-    # rm(tempVarCov)
-    # outputVarCovMat$j <- factor(outputVarCovMat$j)
-    # outputVarCovMat$value <- as.numeric(outputVarCovMat$value)
-    # attr(outputVarCovMat, "symName") <-  "VarCov"
-    # attr(outputVarCovMat, "domains") <-  "c(i, j)"
-    # attr(outputVarCovMat, "ts") <-  "Variance-Covariance matrix"
-    #
+    tempExpRet <- clusterResultReturns() %>% apply(2, geomAveCalc)
+    outputExpRet <- data.frame(Asset = names(tempExpRet),ExpectedReturns = tempExpRet, row.names=NULL)
+    rm(tempExpRet)
+    attr(outputExpRet, "symName") <-  'ExpectedReturns'
+    attr(outputExpRet, "domains") <- "i"
+    attr(outputExpRet, "ts") <- "Expected Returns for each asset"
+
+    # VarCovariance Matrix
+    tempVarCov <- cov(clusterResultReturns())
+    outputVarCovMat <- data.frame(cbind(i=rownames(tempVarCov), tempVarCov), row.names = NULL) %>%
+      gather(j,value, -i)
+    #rm(tempVarCov)
+    outputVarCovMat$j <- factor(outputVarCovMat$j)
+    outputVarCovMat$value <- as.numeric(outputVarCovMat$value)
+    attr(outputVarCovMat, "symName") <-  "VarCov"
+    attr(outputVarCovMat, "domains") <-  "c(i, j)"
+    attr(outputVarCovMat, "ts") <-  "Variance-Covariance matrix"
+
     # # Set GAMS directory
     # igdx("/Applications/GAMS24.8/sysdir")
     #
@@ -321,13 +320,44 @@ shinyServer(function(input, output) {
     # CVaR_resultAllocation <- rgdx.param(gdxName = "/Users/apple/Dropbox/InvestmentFunnel/Developercopy/GAMSandGDXfiles/resultsVaR_CVaR.gdx",
     #                                    symName = 'CVaR_x', squeeze = FALSE)
 
-    EW_resultAllocation <- data.frame(i = clustering$Gselect, EW_x = rep(1/length(clustering$Gselect),length(clustering$Gselect)))
 
-    resultMarkovitch <- list(EW_Allocation = EW_resultAllocation)
 
-    print('Optimization Done')
-    resultMarkovitch
+    switch(input$modelChoices,
+           "MeanVar" = {
+             #  Markowitz Mean-Var Portfolio Optimization ---------------------------------------
 
+             n=length(clustering$Gselect)
+             mu = outputExpRet$ExpectedReturns
+             Sigma = tempVarCov
+             gamma = input$dynamic
+
+             w <- Variable(n)
+             ret <- t(mu) %*% w
+             risk <- quad_form(w, Sigma)
+             obj <- (1- gamma)*ret - gamma * risk
+             constr <- list(w >= 0, sum(w) == 1)
+             #constr <- list(p_norm(w,1) <= Lmax, sum(w) == 1) #allow shorting
+             prob <- Problem(Maximize(obj), constr)
+             result <- solve(prob)
+             result$getValue(risk)
+             result$getValue(ret)
+
+             MeanVaR_resultAllocation=data.frame(i = clustering$Gselect, EW_x = result$getValue(w))
+
+             resultMarkovitch <- list(MeanVaR_Allocation = MeanVaR_resultAllocation)
+             # ---------------------------------------
+           },
+           "EW" = {
+
+
+             EW_resultAllocation <- data.frame(i = clustering$Gselect, EW_x = rep(1/length(clustering$Gselect),length(clustering$Gselect)))
+
+             resultMarkovitch <- list(EW_Allocation = EW_resultAllocation)
+
+             print('Optimization Done')
+             resultMarkovitch
+             #MeanVaR_resultAllocation
+           })
   })
 
   observeEvent(input$optimizeButton,
@@ -567,7 +597,7 @@ shinyServer(function(input, output) {
 
     ##### Optimization Part #####
     testPerAssetPrices <-
-      sqlQuery(
+      na.omit(sqlQuery(
         paste0(
           "SELECT date AS Date, symbol, adjusted_close AS Price FROM historicaldata WHERE symbol IN ('",
           paste0(clustering$Gselect, collapse = "', '"),
@@ -575,12 +605,12 @@ shinyServer(function(input, output) {
           input$backtestYears ,
           " YEAR"
         )
-      ) %>% spread(symbol, Price)
+      )) %>% spread(symbol, Price)
 
 
 
     rownames(testPerAssetPrices) <- testPerAssetPrices$Date
-    testPerAssetPrices <- testPerAssetPrices[, -which(colnames(testPerAssetPrices) == 'Date')]
+    testPerAssetPrices <- na.omit(testPerAssetPrices[, -which(colnames(testPerAssetPrices) == 'Date')])
 
 
     print('--B--')
@@ -593,27 +623,32 @@ shinyServer(function(input, output) {
 
     switch(input$EGSEtfs,
            "FALSE" = {
-             # CVaR_portfolio_value <-
-             #   PortfolioBackTest(
-             #     assets = optimizeVal()$CVaR_Allocation$i,
-             #     asset_weights = optimizeVal()$CVaR_Allocation$CVaR_x,
-             #     asset_prices = testPerAssetPrices[, as.character(optimizeVal()$CVaR_Allocation$i)]
-             #   )
-             #
-             # VaR_portfolio_value <-
-             #   PortfolioBackTest(
-             #     assets = optimizeVal()$VaR_Allocation$i,
-             #     asset_weights = optimizeVal()$VaR_Allocation$VaR_x,
-             #     asset_prices = testPerAssetPrices[, as.character(optimizeVal()$VaR_Allocation$i)]
-             #   )
-
-             EW_portfolio_value <-
-               PortfolioBackTest(
-                 assets = optimizeVal()$EW_Allocation$i,
-                 asset_weights = optimizeVal()$EW_Allocation$EW_x,
-                 asset_prices = testPerAssetPrices[, as.character(optimizeVal()$EW_Allocation$i)]
-               )
-             models_df <- data.frame(Date = names(EW_portfolio_value), EW = EW_portfolio_value)
+             switch(input$modelChoices,
+                    "MeanVar" = {
+                      MeanVaR_portfolio_value <-
+                        PortfolioBackTest(
+                          assets = optimizeVal()$MeanVaR_Allocation$i,
+                          asset_weights = optimizeVal()$MeanVaR_Allocation$EW_x,
+                          asset_prices = testPerAssetPrices[, as.character(optimizeVal()$MeanVaR_Allocation$i)]
+                        )
+                      models_df <- data.frame(Date = names(MeanVaR_portfolio_value), MeanVar = MeanVaR_portfolio_value)
+                    },
+                    #
+                    # VaR_portfolio_value <-
+                    #   PortfolioBackTest(
+                    #     assets = optimizeVal()$VaR_Allocation$i,
+                    #     asset_weights = optimizeVal()$VaR_Allocation$VaR_x,
+                    #     asset_prices = testPerAssetPrices[, as.character(optimizeVal()$VaR_Allocation$i)]
+                    #   )
+                    "EW" = {
+                      EW_portfolio_value <-
+                        PortfolioBackTest(
+                          assets = optimizeVal()$EW_Allocation$i,
+                          asset_weights = optimizeVal()$EW_Allocation$EW_x,
+                          asset_prices = testPerAssetPrices[, as.character(optimizeVal()$EW_Allocation$i)]
+                        )
+                      models_df <- data.frame(Date = names(EW_portfolio_value), EW = EW_portfolio_value)
+                    })
            },
 
            "TRUE" = { EW_portfolio_value <-

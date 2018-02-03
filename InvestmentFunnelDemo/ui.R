@@ -227,15 +227,14 @@ shinyUI(
 
                 ##### PORTFOLIO OPTIMIZATION #######
                 box(
-                  sliderInput("numberInPortfolio", "Number of Assets in Portfolio:", min = 1, max = 10, value = 5, post=" Assets"),
+                #sliderInput("numberInPortfolio", "Number of Assets in Portfolio:", min = 1, max = 10, value = 5, post=" Assets"),
+                #sliderInput("dynamic", "Gamma (Risk aversion parameter. Gamma = 100% is risk-averse investor)", min = 0, max = 100, value = 5, post=" Assets"),
 
                   fluidRow(
                     column(width = 6,
                            radioButtons("modelChoices",
                                         label = h3("Select Models"),
                                         choices = list("Mean-Variance" = "MeanVar",
-                                                       "Value-at-Risk" = "VaR",
-                                                       "Conditional-Value-at-Risk" = "CVaR",
                                                        "Equal-weights" = "EW")
                            )
                     ),
