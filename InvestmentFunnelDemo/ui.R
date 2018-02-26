@@ -8,7 +8,7 @@ shinyUI(
 
       sidebarMenu(
         menuItem("Data Inspection", tabName = "menu", icon = icon("home")),
-        menuItem("Due Diligence", tabName = "duedil", icon = icon("bars")),
+        menuItem("Screeing", tabName = "Screeing", icon = icon("bars")),
         menuItem("Models & Tests", tabName = "models", icon = icon("bars")),
         menuItem("Results", tabName = "results", icon = icon("check"))
       )),
@@ -59,8 +59,8 @@ shinyUI(
         ),
 
 
-        ####################################### DUE DILIGENCE #######################################
-        tabItem(tabName = "duedil",
+        ####################################### Screeing  #######################################
+        tabItem(tabName = "Screeing",
                 fluidRow(
                   column(12, align="center", offset = 3,
                          box(

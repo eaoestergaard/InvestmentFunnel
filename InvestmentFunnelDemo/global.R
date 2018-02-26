@@ -35,8 +35,8 @@ randomPort_returns <- data.frame(fread('RandomPortfoliosReturns.csv', select = 1
 sqlQuery <- function (query) {
   # creating DB connection object with RMysql package
   DB <- dbConnect(MySQL(),
-                  user = 'X',
-                  password = 'X',
+                  user = 'x',
+                  password = 'x',
                   host = 'investmentfunneldbinstance.c7kykd0usi6b.us-east-2.rds.amazonaws.com',
                   dbname='investmentfunnel')
 
@@ -69,11 +69,11 @@ totReturnsCalc <- function(x){
 
 # Calculate Sharpe-Ratio
 sharpeRatioCalc <- function(x){
-  geomAveCalc(x) / sd(x)
+  geomAveCalc(x) / sd(x)*sqrt(250)
 }
 
 circBarPlot <- function(x = c(length(dataMeta$ticker), length(dataSelection$ticker), input$numberOfClusters, input$numberInPortfolio),
-                        labels = c("Data", "Due Dil.", "Clustering", "Optimization"),
+                        labels = c("Data", "Screeing", "Clustering", "Optimization"),
                         colors=brewer.pal(length(x), "Blues"), cex.lab=1) {
   plot(0,xlim=c(-1.1,1.1),ylim=c(-1.1,1.1),type="n",axes=F, xlab=NA, ylab=NA)
   radii <- seq(1, 0.3, length.out=length(x))

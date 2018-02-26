@@ -19,7 +19,7 @@ shinyServer(function(input, output) {
     )
   })
 
-  ####################################### ASSET SELECTION - DUE DILIGENCE #######################################
+  ####################################### ASSET SELECTION - Screeing #######################################
 
   dataSelection <- reactiveVal()
   dataSelection(assets) # initialize
@@ -69,31 +69,31 @@ shinyServer(function(input, output) {
   },
   {
     output$plotStatus <- renderPlot({
-      Category <- c("Data", "Due Dil.", "Clustering", "Optimization")
+      Category <- c("Data", "Screeing", "Clustering", "Optimization")
       Percent <- c(length(assets), length(dataSelection()$ticker), input$numberOfClusters, input$numberInPortfolio)
       circBarPlot(Percent, Category)
     })
 
     output$plotStatus1 <- renderPlot({
-      Category <- c("Data", "Due Dil.", "Clustering", "Optimization")
+      Category <- c("Data", "Screeing", "Clustering", "Optimization")
       Percent <- c(length(assets), length(dataSelection()$ticker), input$numberOfClusters, input$numberInPortfolio)
       circBarPlot(Percent, Category)
     })
 
     output$plotStatus2 <- renderPlot({
-      Category <- c("Data", "Due Dil.", "Clustering", "Optimization")
+      Category <- c("Data", "Screeing", "Clustering", "Optimization")
       Percent <- c(length(assets), length(dataSelection()$ticker), input$numberOfClusters, input$numberInPortfolio)
       circBarPlot(Percent, Category)
     })
 
     output$plotStatus3 <- renderPlot({
-      Category <- c("Data", "Due Dil.", "Clustering", "Optimization")
+      Category <- c("Data", "Screeing", "Clustering", "Optimization")
       Percent <- c(length(assets), length(dataSelection()$ticker), input$numberOfClusters, input$numberInPortfolio)
       circBarPlot(Percent, Category)
     })
   })
 
-  ####################################### Due Diligence #######################################
+  ####################################### Screeing #######################################
 
 
 
@@ -104,7 +104,8 @@ shinyServer(function(input, output) {
   clustering <- reactiveValues(clustering = NULL)
 
   observeEvent(input$generateClustering, {
-    print('Begin Clustering')
+    #print('Begin Clustering')
+    withProgress(message = 'Performing Clustering', value = 0.02, {
     clustering$AssetPrices <- na.omit(sqlQuery(paste0("SELECT date AS Date, symbol, adjusted_close AS Price FROM historicaldata WHERE symbol IN ('",
                                                       paste0(dataSelection()$ticker, collapse = "', '"), "') AND
                                                       Date < CURDATE() - INTERVAL ", input$backtestYears ," YEAR"))) %>% spread(symbol, Price)
@@ -115,13 +116,13 @@ shinyServer(function(input, output) {
     clustering$AssetReturns <- clustering$AssetReturns[complete.cases(clustering$AssetReturns), ]
 
     # Create a Progress object
-    progress <- shiny::Progress$new(style = 'notification' , min = 0, max = 10)
-    progress$set(message = "Performing Clustering",
-                 detail = "This may take a while...",
-                 value = 5)
+    #progress <- shiny::Progress$new(style = 'notification' , min = 0, max = 10)
+     #progress$set(message = "Performing Clustering",
+      #            detail = "This may take a while...",
+     #             value = 5)
 
     # Close the progress when this reactive exits (even if there's an error)
-    on.exit(progress$close())
+    #on.exit(progress$close())
 
     clustering$c <- switch(input$corMethod,
                            pearson = cor(clustering$AssetReturns, method = 'pearson'),
@@ -130,9 +131,9 @@ shinyServer(function(input, output) {
     )
 
     clustering$d <- switch(input$distMetric,
-                           A = as.dist(1-abs(clustering$c)),
-                           B = as.dist(1-clustering$c),
-                           C = as.dist(abs(1-clustering$c))
+                           A = as.dist(1-abs(clustering$c))^2,
+                           B = as.dist(1-clustering$c)^2,
+                           C = as.dist(abs(1-clustering$c))^2
     )
 
     clustering$hc <- switch(input$linkage,
@@ -143,10 +144,13 @@ shinyServer(function(input, output) {
                             wardD = hclust(clustering$d, method = "ward.D"),
                             wardD2 = hclust(clustering$d, method = "ward.D2")
     )
-    print('--Clustering Nearly Done--')
+    incProgress(amount = 0.9)
+    Sys.sleep(1)
+    #print('--Clustering Nearly Done--')
 
     clustering$Cno <- input$numberOfClusters
     clustering$memb <- cutree(clustering$hc, k = clustering$Cno)
+
 
     ### HERE NEED TO ADD STATISTICS WITH SWITCH
 
@@ -168,7 +172,9 @@ shinyServer(function(input, output) {
         clustering$criteria[j] <- switch(input$selectionCriteria,
                                          highestReturn = geomAveCalc(clustering$AssetReturns[,clustering$Gnames[j]]),
                                          minimumStd  =  sd(clustering$AssetReturns[,clustering$Gnames[j]]),
-                                         highestSharpe = sharpeRatioCalc(clustering$AssetReturns[,clustering$Gnames[j]])
+                                         highestSharpe = sharpeRatioCalc(clustering$AssetReturns[,clustering$Gnames[j]]
+                                         #mostRepresentive = dist(clustering$c[,clustering$Gnames])^2
+                                         )
         )
 
       }
@@ -176,14 +182,17 @@ shinyServer(function(input, output) {
                                       highestReturn = clustering$Gnames[which(max(clustering$criteria) == clustering$criteria)],
                                       minimumStd =  clustering$Gnames[which(min(clustering$criteria) == clustering$criteria)],
                                       highestSharpe =  clustering$Gnames[which(max(clustering$criteria) == clustering$criteria)]
-      )
+                                      #mostRepresentive =  clustering$Gnames[which(max(clustering$criteria) == clustering$criteria)]
+                                      )
     }
     setProgress(5)
 
     clustering$ClustSize <- data.frame(Cluster = sprintf("Clst%d", 1:clustering$Cno), Size = clustering$clustCount)
     clustering$statsClust <- clustering$statsAll[which(clustering$statsAll$ETF %in% clustering$Gselect),]
 
-    print('--Clustering Done--')
+    #print('--Clustering Done--')
+    incProgress(amount = 1, detail = paste("Clustering Done"))
+    Sys.sleep(2)})
 
   })
 
@@ -247,7 +256,9 @@ shinyServer(function(input, output) {
   ## Optimization in R
 
   optimizeVal <- eventReactive(input$optimizeButton, {
-    print('Begin Optimization')
+    #print('Begin Optimization')
+    withProgress(message = 'Optimizing', value = 0.03, {
+
     # Asset Names
     outputAssets <- data.frame(Assets = clustering$Gselect)
     attr(outputAssets, "symName") <-  "Asset"
@@ -354,10 +365,13 @@ shinyServer(function(input, output) {
 
              resultMarkovitch <- list(EW_Allocation = EW_resultAllocation)
 
-             print('Optimization Done')
+             #print('Optimization Done')
+
              resultMarkovitch
              #MeanVaR_resultAllocation
            })
+    incProgress(amount = 1,detail = paste("Optimization done"))
+    Sys.sleep(1) })
   })
 
   observeEvent(input$optimizeButton,
