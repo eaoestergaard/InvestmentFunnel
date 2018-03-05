@@ -8,7 +8,7 @@ shinyUI(
 
       sidebarMenu(
         menuItem("Data Inspection", tabName = "menu", icon = icon("home")),
-        menuItem("Screeing", tabName = "Screeing", icon = icon("bars")),
+        menuItem("Screening", tabName = "Screening", icon = icon("bars")),
         menuItem("Models & Tests", tabName = "models", icon = icon("bars")),
         menuItem("Results", tabName = "results", icon = icon("check"))
       )),
@@ -59,8 +59,8 @@ shinyUI(
         ),
 
 
-        ####################################### Screeing  #######################################
-        tabItem(tabName = "Screeing",
+        ####################################### Screening  #######################################
+        tabItem(tabName = "Screening",
                 fluidRow(
                   column(12, align="center", offset = 3,
                          box(
@@ -234,7 +234,8 @@ shinyUI(
                     column(width = 6,
                            radioButtons("modelChoices",
                                         label = h3("Select Models"),
-                                        choices = list("Mean-Variance" = "MeanVar",
+                                        choices = list("Most Representive" = "MR",
+                                                       "Mean-Variance" = "MeanVar",
                                                        "Equal-weights" = "EW")
                            )
                     ),

@@ -19,7 +19,7 @@ shinyServer(function(input, output) {
     )
   })
 
-  ####################################### ASSET SELECTION - Screeing #######################################
+  ####################################### ASSET SELECTION - Screening  #######################################
 
   dataSelection <- reactiveVal()
   dataSelection(assets) # initialize
@@ -69,31 +69,31 @@ shinyServer(function(input, output) {
   },
   {
     output$plotStatus <- renderPlot({
-      Category <- c("Data", "Screeing", "Clustering", "Optimization")
+      Category <- c("Data", "Screening", "Clustering", "Optimization")
       Percent <- c(length(assets), length(dataSelection()$ticker), input$numberOfClusters, input$numberInPortfolio)
       circBarPlot(Percent, Category)
     })
 
     output$plotStatus1 <- renderPlot({
-      Category <- c("Data", "Screeing", "Clustering", "Optimization")
+      Category <- c("Data", "Screening", "Clustering", "Optimization")
       Percent <- c(length(assets), length(dataSelection()$ticker), input$numberOfClusters, input$numberInPortfolio)
       circBarPlot(Percent, Category)
     })
 
     output$plotStatus2 <- renderPlot({
-      Category <- c("Data", "Screeing", "Clustering", "Optimization")
+      Category <- c("Data", "Screening", "Clustering", "Optimization")
       Percent <- c(length(assets), length(dataSelection()$ticker), input$numberOfClusters, input$numberInPortfolio)
       circBarPlot(Percent, Category)
     })
 
     output$plotStatus3 <- renderPlot({
-      Category <- c("Data", "Screeing", "Clustering", "Optimization")
+      Category <- c("Data", "Screening", "Clustering", "Optimization")
       Percent <- c(length(assets), length(dataSelection()$ticker), input$numberOfClusters, input$numberInPortfolio)
       circBarPlot(Percent, Category)
     })
   })
 
-  ####################################### Screeing #######################################
+  ####################################### Screening #######################################
 
 
 
@@ -117,9 +117,9 @@ shinyServer(function(input, output) {
 
     # Create a Progress object
     #progress <- shiny::Progress$new(style = 'notification' , min = 0, max = 10)
-     #progress$set(message = "Performing Clustering",
-      #            detail = "This may take a while...",
-     #             value = 5)
+    #progress$set(message = "Performing Clustering",
+                 #detail = "This may take a while...",
+                # value = 5)
 
     # Close the progress when this reactive exits (even if there's an error)
     #on.exit(progress$close())
@@ -131,9 +131,9 @@ shinyServer(function(input, output) {
     )
 
     clustering$d <- switch(input$distMetric,
-                           A = as.dist(1-abs(clustering$c))^2,
-                           B = as.dist(1-clustering$c)^2,
-                           C = as.dist(abs(1-clustering$c))^2
+                           A = as.dist(1-abs(clustering$c)),
+                           B = as.dist(1-clustering$c),
+                           C = as.dist(abs(1-clustering$c))
     )
 
     clustering$hc <- switch(input$linkage,
@@ -144,13 +144,14 @@ shinyServer(function(input, output) {
                             wardD = hclust(clustering$d, method = "ward.D"),
                             wardD2 = hclust(clustering$d, method = "ward.D2")
     )
+
+
     incProgress(amount = 0.9)
     Sys.sleep(1)
     #print('--Clustering Nearly Done--')
 
     clustering$Cno <- input$numberOfClusters
     clustering$memb <- cutree(clustering$hc, k = clustering$Cno)
-
 
     ### HERE NEED TO ADD STATISTICS WITH SWITCH
 
@@ -163,6 +164,9 @@ shinyServer(function(input, output) {
     clustering$clustCount <- rep(0,clustering$Cno)
 
 
+
+
+
     for(i in 1:clustering$Cno){
       clustering$Gnames <- names(which(clustering$memb == i))   # the names of the assets in clusters i
       clustering$criteria <- rep(0,length(clustering$Gnames))   # storage for the selection criteria
@@ -173,7 +177,7 @@ shinyServer(function(input, output) {
                                          highestReturn = geomAveCalc(clustering$AssetReturns[,clustering$Gnames[j]]),
                                          minimumStd  =  sd(clustering$AssetReturns[,clustering$Gnames[j]]),
                                          highestSharpe = sharpeRatioCalc(clustering$AssetReturns[,clustering$Gnames[j]]
-                                         #mostRepresentive = dist(clustering$c[,clustering$Gnames])^2
+                                                                         #mostRepresentive = dist(clustering$c[,clustering$Gnames])^2
                                          )
         )
 
@@ -183,8 +187,14 @@ shinyServer(function(input, output) {
                                       minimumStd =  clustering$Gnames[which(min(clustering$criteria) == clustering$criteria)],
                                       highestSharpe =  clustering$Gnames[which(max(clustering$criteria) == clustering$criteria)]
                                       #mostRepresentive =  clustering$Gnames[which(max(clustering$criteria) == clustering$criteria)]
-                                      )
+      )
     }
+
+
+
+
+
+
     setProgress(5)
 
     clustering$ClustSize <- data.frame(Cluster = sprintf("Clst%d", 1:clustering$Cno), Size = clustering$clustCount)
@@ -224,14 +234,14 @@ shinyServer(function(input, output) {
                                 selected = "option2"
            )#,
            #"CVaR" =  radioButtons("dynamic", "Confidence Level",
-            #                      choices = c("90%" = "option1",
-              #                                "95%" = "option2",
-                 #                             "99%" = "option3"),
-                     #             selected = "option2"
+           #                      choices = c("90%" = "option1",
+           #                                "95%" = "option2",
+           #                             "99%" = "option3"),
+           #             selected = "option2"
            #),
 
-          # "EWS" = checkboxInput("dynamic", "Dynamic",
-                        #         value = TRUE)
+           # "EWS" = checkboxInput("dynamic", "Dynamic",
+           #         value = TRUE)
     )
   })
 
@@ -257,8 +267,7 @@ shinyServer(function(input, output) {
 
   optimizeVal <- eventReactive(input$optimizeButton, {
     #print('Begin Optimization')
-    withProgress(message = 'Optimizing', value = 0.03, {
-
+   # withProgress(message = 'Optimizing', value = 0.03, {
     # Asset Names
     outputAssets <- data.frame(Assets = clustering$Gselect)
     attr(outputAssets, "symName") <-  "Asset"
@@ -299,6 +308,15 @@ shinyServer(function(input, output) {
     attr(outputVarCovMat, "domains") <-  "c(i, j)"
     attr(outputVarCovMat, "ts") <-  "Variance-Covariance matrix"
 
+
+
+
+
+
+
+
+
+
     # # Set GAMS directory
     # igdx("/Applications/GAMS24.8/sysdir")
     #
@@ -333,7 +351,78 @@ shinyServer(function(input, output) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     switch(input$modelChoices,
+
+            "MR" = {
+              #w = clust.means.weight(cor, clustering$memb)
+              data = clustering$c ## Todo - consider clust$d
+              clust = clustering$memb
+              # clust.means.weight <-  function (data, clust) {
+              nvars=length(data[1,])
+              ntypes=max(clust)
+              centroids<-matrix(0,ncol=nvars,nrow=ntypes)
+              weight<-matrix(0,ncol=nvars,nrow=ntypes)
+
+              for(i in 1:ntypes) {
+                c<-rep(0,nvars)
+                n<-0
+                for(j in names(clust[clust==i])) {
+                  n<-n+1
+                  c<-c+data[j,]
+                }
+                centroids[i,]<-c/n
+                s = sum(centroids[i,as.factor(clust) == i])
+                weight[i,] = centroids[i,] / s
+                weight[i,as.factor(clust) != i] = 0
+
+              }
+              rownames(centroids)<-c(1:ntypes)
+              colnames(centroids)<-colnames(data)
+
+              #rownames(weight)<-c(1:ntypes)
+              #colnames(weight)<-colnames(data)
+              w = colSums(weight/ntypes) # TODO: maybe clusters should not be weighed equally...
+              #  return(w)
+              #}
+
+
+              MR_resultAllocation <- data.frame(i = names(clustering$memb), EW_x = w)
+
+              resultMarkovitch <- list(MR_Allocation = MR_resultAllocation)
+
+
+            },
            "MeanVar" = {
              #  Markowitz Mean-Var Portfolio Optimization ---------------------------------------
 
@@ -360,18 +449,16 @@ shinyServer(function(input, output) {
            },
            "EW" = {
 
-
              EW_resultAllocation <- data.frame(i = clustering$Gselect, EW_x = rep(1/length(clustering$Gselect),length(clustering$Gselect)))
-
              resultMarkovitch <- list(EW_Allocation = EW_resultAllocation)
-
              #print('Optimization Done')
 
              resultMarkovitch
              #MeanVaR_resultAllocation
            })
-    incProgress(amount = 1,detail = paste("Optimization done"))
-    Sys.sleep(1) })
+    #incProgress(amount = 1,detail = paste("Optimization done"))
+   # Sys.sleep(1) })
+
   })
 
   observeEvent(input$optimizeButton,
@@ -610,11 +697,27 @@ shinyServer(function(input, output) {
     portfolioPlotData$Portfolio <- as.factor(portfolioPlotData$Portfolio)
 
     ##### Optimization Part #####
+    testPerAssetPricesVersionForMR <-
+      na.omit(sqlQuery(
+        paste0(
+          "SELECT date AS Date, symbol, adjusted_close AS Price FROM historicaldata WHERE symbol IN ('",
+          paste0(names(clustering$memb), collapse = "', '"),
+          "') AND Date > CURDATE() - INTERVAL ",
+          input$backtestYears ,
+          " YEAR"
+        )
+      )) %>% spread(symbol, Price)
+
     testPerAssetPrices <-
       na.omit(sqlQuery(
         paste0(
           "SELECT date AS Date, symbol, adjusted_close AS Price FROM historicaldata WHERE symbol IN ('",
-          paste0(clustering$Gselect, collapse = "', '"),
+          paste0(
+            switch(input$modelChoices,
+                   "MR" = {names(clustering$memb)},
+                   "MeanVar" = {clustering$Gselect},
+                   "EW" = {clustering$Gselect})
+            , collapse = "', '"),
           "') AND Date > CURDATE() - INTERVAL ",
           input$backtestYears ,
           " YEAR"
@@ -638,6 +741,16 @@ shinyServer(function(input, output) {
     switch(input$EGSEtfs,
            "FALSE" = {
              switch(input$modelChoices,
+                    "MR" = {
+                      MR_portfolio_value <-
+                        PortfolioBackTest(
+                          assets = optimizeVal()$MR_Allocation$i,
+                          asset_weights = optimizeVal()$MR_Allocation$EW_x,
+                          asset_prices = testPerAssetPrices[, as.character(optimizeVal()$MR_Allocation$i)]
+                        )
+                      models_df <- data.frame(Date = names(MR_portfolio_value), MR = MR_portfolio_value)
+                    },
+
                     "MeanVar" = {
                       MeanVaR_portfolio_value <-
                         PortfolioBackTest(
@@ -665,12 +778,25 @@ shinyServer(function(input, output) {
                     })
            },
 
-           "TRUE" = { EW_portfolio_value <-
-             PortfolioBackTest(
-               assets = optimizeVal()$EW_Allocation$i,
-               asset_weights = optimizeVal()$EW_Allocation$EW_x,
-               asset_prices = testPerAssetPrices[complete.cases(testPerAssetPrices), as.character(optimizeVal()$EW_Allocation$i)])
-           models_df <- data.frame(Date = names(EW_portfolio_value), EW = EW_portfolio_value)
+           "TRUE" = {
+             switch(input$modelChoices,
+                    "MR" = {
+                      MR_portfolio_value <-
+                        PortfolioBackTest(
+                          assets = optimizeVal()$MR_Allocation$i,
+                          asset_weights = optimizeVal()$MR_Allocation$EW_x,
+                          asset_prices = testPerAssetPrices[complete.cases(testPerAssetPrices), as.character(optimizeVal()$MR_Allocation$i)])
+                      models_df <- data.frame(Date = names(MR_portfolio_value), MR = MR_portfolio_value)
+                    },
+
+                    "EW" = {
+                      EW_portfolio_value <-
+                        PortfolioBackTest(
+                          assets = optimizeVal()$EW_Allocation$i,
+                          asset_weights = optimizeVal()$EW_Allocation$EW_x,
+                          asset_prices = testPerAssetPrices[complete.cases(testPerAssetPrices), as.character(optimizeVal()$EW_Allocation$i)])
+                      models_df <- data.frame(Date = names(EW_portfolio_value), EW = EW_portfolio_value)
+                    })
            })
 
     optimData <- gather(models_df, key = 'Portfolio', value = 'Price', -Date)
@@ -701,5 +827,4 @@ shinyServer(function(input, output) {
   })
 
 
-  })
-
+})
