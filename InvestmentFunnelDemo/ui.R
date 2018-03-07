@@ -208,7 +208,8 @@ shinyUI(
                            radioButtons("selectionCriteria", label = h3("Selection Criteria"),
                                         choices = list("Highest Return" = 'highestReturn',
                                                        "Minimum Standard Deviation" = 'minimumStd',
-                                                       "Highest Sharpe Ratio" = 'highestSharpe')))
+                                                       "Highest Sharpe Ratio" = 'highestSharpe',
+                                                       "Most Representive" = 'mostRepresentive')))
                   ),
 
                   hr(),
@@ -234,8 +235,7 @@ shinyUI(
                     column(width = 6,
                            radioButtons("modelChoices",
                                         label = h3("Select Models"),
-                                        choices = list("Most Representive" = "MR",
-                                                       "Mean-Variance" = "MeanVar",
+                                        choices = list("Mean-Variance" = "MeanVar",
                                                        "Equal-weights" = "EW")
                            )
                     ),

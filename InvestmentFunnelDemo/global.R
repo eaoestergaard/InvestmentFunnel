@@ -72,6 +72,12 @@ sharpeRatioCalc <- function(x){
   geomAveCalc(x) / sd(x)*sqrt(250)
 }
 
+# function to find medoid in cluster i
+clust.medoid = function(i, distMatrix, clusters) {
+  ind = (clusters == i)
+  names(which.min(rowSums( distMatrix[ind, ind] )))
+}
+
 
 
 

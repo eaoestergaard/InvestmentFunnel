@@ -1,0 +1,10 @@
+name: investmentfunneldemo
+title:
+username:
+account: theinvestmentfunnelproject
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 271386
+bundleId: 1257862
+url: https://theinvestmentfunnelproject.shinyapps.io/investmentfunneldemo/
+when: 1520461598.75253

@@ -146,7 +146,7 @@ shinyServer(function(input, output) {
     )
 
 
-    incProgress(amount = 0.9)
+    incProgress(amount = 0.8)
     Sys.sleep(1)
     #print('--Clustering Nearly Done--')
 
@@ -163,10 +163,6 @@ shinyServer(function(input, output) {
     clustering$time <- rownames(data) # time parameters
     clustering$clustCount <- rep(0,clustering$Cno)
 
-
-
-
-
     for(i in 1:clustering$Cno){
       clustering$Gnames <- names(which(clustering$memb == i))   # the names of the assets in clusters i
       clustering$criteria <- rep(0,length(clustering$Gnames))   # storage for the selection criteria
@@ -176,21 +172,26 @@ shinyServer(function(input, output) {
         clustering$criteria[j] <- switch(input$selectionCriteria,
                                          highestReturn = geomAveCalc(clustering$AssetReturns[,clustering$Gnames[j]]),
                                          minimumStd  =  sd(clustering$AssetReturns[,clustering$Gnames[j]]),
-                                         highestSharpe = sharpeRatioCalc(clustering$AssetReturns[,clustering$Gnames[j]]
-                                                                         #mostRepresentive = dist(clustering$c[,clustering$Gnames])^2
-                                         )
+                                         highestSharpe = sharpeRatioCalc(clustering$AssetReturns[,clustering$Gnames[j]]),
+                                         mostRepresentive = 0 #TODO: Remove
+
         )
 
       }
+      incProgress(amount = 0.9)
+
       clustering$Gselect[i] <- switch(input$selectionCriteria,
                                       highestReturn = clustering$Gnames[which(max(clustering$criteria) == clustering$criteria)],
                                       minimumStd =  clustering$Gnames[which(min(clustering$criteria) == clustering$criteria)],
-                                      highestSharpe =  clustering$Gnames[which(max(clustering$criteria) == clustering$criteria)]
-                                      #mostRepresentive =  clustering$Gnames[which(max(clustering$criteria) == clustering$criteria)]
+                                      highestSharpe =  clustering$Gnames[which(max(clustering$criteria) == clustering$criteria)],
+                                      mostRepresentive = "" #TODO: Remove
       )
     }
 
+    if (input$selectionCriteria == "mostRepresentive") {
+      clustering$Gselect = sapply(unique(clustering$memb), clust.medoid, as.matrix(clustering$d), clustering$memb)
 
+    }
 
 
 
@@ -309,14 +310,6 @@ shinyServer(function(input, output) {
     attr(outputVarCovMat, "ts") <-  "Variance-Covariance matrix"
 
 
-
-
-
-
-
-
-
-
     # # Set GAMS directory
     # igdx("/Applications/GAMS24.8/sysdir")
     #
@@ -351,39 +344,8 @@ shinyServer(function(input, output) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     switch(input$modelChoices,
-
+            #most representive based on centroid (=!medoid)
             "MR" = {
               #w = clust.means.weight(cor, clustering$memb)
               data = clustering$c ## Todo - consider clust$d
