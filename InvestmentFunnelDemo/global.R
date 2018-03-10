@@ -40,8 +40,8 @@ sqlQuery <- function (query) {
   # creating DB connection object with RMysql package
 
   DB <- dbConnect(MySQL(),
-                  user = 'andrimar1',
-                  password = 'investFunnel',
+                  user = 'X',
+                  password = 'X',
                   host = 'investmentfunneldbinstance.c7kykd0usi6b.us-east-2.rds.amazonaws.com',
                   dbname='investmentfunnel')
   
