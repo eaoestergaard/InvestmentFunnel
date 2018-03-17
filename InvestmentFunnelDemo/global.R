@@ -25,6 +25,8 @@ library(CVXR)
 library(nloptr)
 library(rhandsontable)
 
+load("exchangeRates.RData")
+
 ESGetf <- c("DSI", "SUSA", "CRBN", "TAN",  "SHE",  "SPYX", "ESGD", "CATH", "ESGG", "EFAX",
             "KRMA", "NUBD", "NUSC", "NULG", "NULV", "NUDM", "NUMG", "NUMV", "RODI", "WIL",
             "NUEM", "MPCT", "ESGL", "ETHO", "ESGF",  "IBD",  "ESGU", "EEMX", "EQLT", "ESGN",
@@ -38,13 +40,13 @@ randomPort_returns <- data.frame(fread('RandomPortfoliosReturns.csv', select = 1
 # Function that executes SQL queries in the database "investmentfunnel"
 sqlQuery <- function (query) {
   # creating DB connection object with RMysql package
-  
+
   DB <- dbConnect(MySQL(),
-                  user = 'X',
-                  password = 'X',
+                  user = 'x',
+                  password = 'x',
                   host = 'investmentfunneldbinstance.c7kykd0usi6b.us-east-2.rds.amazonaws.com',
                   dbname='investmentfunnel')
-  
+
   # send Query to obtain result set
   rs <- dbSendQuery(DB, query)
   # get elements from result sets and convert to dataframe
@@ -105,27 +107,27 @@ randomPortGen <- function(asset_universe = FALSE, min_assets = 2, max_assets = 1
                                               from,
                                               " YEAR"))$symbol)
   }
-  
+
   asset_prices <- na.omit(sqlQuery(paste0("SELECT date AS Date, symbol, adjusted_close AS Price FROM historicaldata WHERE symbol IN ('",
                                           paste0(asset_universe, collapse = "', '"), "') AND date BETWEEN CURDATE() - INTERVAL ",
                                           from, " YEAR AND '2017-10-17'"))) %>%
     spread(symbol, Price)
-  
+
   row.names(asset_prices) <- asset_prices$Date
   asset_prices <- asset_prices[,-which(colnames(asset_prices) == 'Date')]
   asset_prices <- asset_prices[, complete.cases(t(asset_prices))]
   asset_universe <- colnames(asset_prices)
-  
+
   port_sizes <- base::sample(min_assets:max_assets, n_samples, replace = TRUE)
   rand_portfolios <- list()
-  
+
   p_names <- sprintf("PP_%02d", 1:n_samples)
-  
+
   for(i in 1:n_samples){
     assets <- base::sample(asset_universe, port_sizes[i])
     rand_portfolios[[p_names[i]]] <- list(assets=assets)
   }
-  
+
   portfolio_returns <- matrix(0L, nrow = dim(asset_prices)[1] - 1, ncol = n_samples, dimnames = list(row.names(asset_prices)[-1], p_names))
   for (i in 1:n_samples){
     temp_assets <- rand_portfolios[[i]]$assets
@@ -136,7 +138,7 @@ randomPortGen <- function(asset_universe = FALSE, min_assets = 2, max_assets = 1
     rand_portfolios[[p_names[i]]]$port_returns <- temp_port_returns
     portfolio_returns[,i] <- temp_port_returns
   }
-  
+
   write.csv(portfolio_returns, 'RandomPortfoliosReturns.csv', row.names = TRUE)
   return(portfolio_returns)
 }
@@ -149,7 +151,7 @@ PortfolioBackTest <- function(assets, asset_weights, asset_prices=NULL, initial_
     # To get around NA's this line is included (should be removed when solution to NAs has been implemened)
     asset_returns <- asset_returns[complete.cases(asset_returns), ]
   }
-  
+
   asset_value <- matrix(0L, nrow = dim(asset_returns)[1] + 1, ncol = length(assets),
                         dimnames = list(c(row.names(asset_prices)[1], rownames(asset_returns)), assets))
   asset_value[1,] <- initial_budget * asset_weights
@@ -372,9 +374,9 @@ suspicious_data_level2 <- function(df, make_returns = TRUE, n0 = .2, maxret = 2,
   # Otherwise return FALSE, indicating no obvious suspicion
   # NOtice: moments are not robust, and they should not be. Similary, we do not care about precise degrees of freedom,
   # since we are looking only for extremes, not precision
-  
+
   if(!is.numeric(df)) return("NOTNUMERIC")
-  
+
   if(make_returns == FALSE) returns <- df
   else {
     returns <-df[1:length(df)-1]
@@ -394,16 +396,16 @@ suspicious_data_level2 <- function(df, make_returns = TRUE, n0 = .2, maxret = 2,
   if(maxr >= maxret) return("POSRETURNS")
   # Now standard statistics
   mn <- mean(returns)
-  
+
   std <- sd(returns)
   if(std >= maxvol) return("VOLATILITY")
-  
+
   skewness <- sum((returns-mn)^3)/length(returns)/(std^3)
   if(abs(skewness) >= maxskew) return("SKEWNESS")
-  
+
   kurtosis <- sum((returns-mn)^4)/length(returns)/std^4
   if(abs(kurtosis-3) >= maxkurt) return("KURTOSIS")
-  
+
   return("FALSE")
 }
 
@@ -480,11 +482,20 @@ risk_parity <- function(asset_returns, lower_limits, upper_limits) {
   #' @examples
   #'   rp <- risk_parity(asset_returns, rep(0, nasset), rep(.3, nasset))
   #'   weights <- rp$solution
-  
+
   # Establish an all-weather portfolio subject to holdings restrictions
   covar <- cov(asset_returns)
   nasset <- ncol(asset_returns)
-  
+
+  # NEW
+  # Check equality constraints
+  for(i in 1:length(lower_limits)) {
+    if(lower_limits[i]==upper_limits[i]) {
+      lower_limits[i] = lower_limits[i] - 1e-5
+      upper_limits[i] = upper_limits[i] + 1e-5
+    }
+  }
+  # NEW END
   # Objective function
   obj <- function(w) {
     risk_contributions <- w * covar %*% w
@@ -492,34 +503,34 @@ risk_parity <- function(asset_returns, lower_limits, upper_limits) {
     ssq <- sum((risk_contributions-mean_contribution)^2)
     return(ssq)
   }
-  
+
   # equality constraints - not used
   eval_g_eq <- function(w) {
     constr <- sum(w) - 1
     return(list("constraints" = constr, "jacobian" = rep(1, nasset)))
   }
-  
+
   # inequality constraints
   eval_g_neq <- function(w) {
     constr <- c(sum(w) - 1, 1-sum(w))
     return(list("constraints" = constr, "jacobian" = c(rep(1, nasset), rep(-1, nasset))))
   }
-  
-  
+
+
   # initial values
   w0 <- rep(1/nasset, nasset)
   for(i in 1:length(w0)) {
     w0[i] <- min(max(w0[i], lower_limits[i]), upper_limits[i])
   }
-  
-  
+
+
   # options
   opts <- list("algorithm" = "NLOPT_LN_COBYLA", "maxeval" = 100000)
-  
+
   res <- nloptr(x0=w0, eval_f = obj, lb = lower_limits, ub = upper_limits, eval_g_ineq = eval_g_neq, opts = opts)
   if(abs(sum(res$solution)-1) > 1e-6)
     res$status <- -10
-  
+
   return(res)
 }
 
@@ -539,8 +550,8 @@ risk_contributions <- function(optimization_result, covar) {
   #' @examples
   #'   rp <- risk_parity(asset_returns, rep(0, nasset), rep(.3, nasset))
   #'   risk_contributions(rp, cov(asset_returns))
-  
-  
+
+
   w <- optimization_result$solution
   contributions <- w*covar %*% w
   sumcontributions <- sum(contributions)
@@ -568,39 +579,39 @@ relative_markowitz <- function(asset_returns, bm_returns, expected_returns, lowe
   #' @examples
   #'   result <- relative_markowitz(asset_returns, bm_returns, rep(0, nasset), rep(.3, nasset), 2)
   #'   weights <- result$getValue(w)
-  
+
   # generate relative returns
   relative_returns <- asset_returns
   nasset <- ncol(asset_returns)
   for(i in 1:nasset) {
     relative_returns[,i] <- asset_returns[,i] - bm_returns
   }
-  
+
   # covariance matrix of excess returns
   covar <- cov(relative_returns)
-  
+
   # Variables
   w <- Variable(ncol(asset_returns))
-  
+
   # Expected (excess) return
   eret <- t(expected_returns %*% w)
-  
+
   # Squared tracking error
   te2 <- quad_form(w, covar)
-  
+
   # Objective: Maximize expected returns
   obj <- eret
-  
+
   # constraints
   constr <- list(w >= lower_limits, w <= upper_limits, sum(w) == 1, te2 <= max_te^2)
-  
+
   # Solve
   prob <- Problem(Maximize(obj), constr)
   result <- solve(prob)
-  
+
   wgts <- list(result$getValue(w))
   rownames(wgts[[1]]) <- names(asset_returns)
-  
+
   return(c("Weights" = wgts, "ExpectReturn" =result$getValue(eret), "Stdev" = sqrt(result$getValue(te2)), "OptStatus" = result$status))
 }
 
@@ -622,35 +633,35 @@ markowitz <- function(asset_returns, expected_returns, lower_limits, upper_limit
   #' @examples
   #'   result <- markowitz(asset_returns, rep(0, nasset), rep(.3, nasset), 2)
   #'   weights <- result$getValue(w)
-  
+
   # generate relative returns
   nasset <- ncol(asset_returns)
-  
+
   # covariance matrix of returns
   covar <- cov(asset_returns)
-  
+
   # Variables
   w <- Variable(ncol(asset_returns))
-  
+
   # Expected (excess) return
   eret <- t(expected_returns %*% w)
-  
+
   # Squared tracking error
   te2 <- quad_form(w, covar)
-  
+
   # Objective: Maximize expected returns
   obj <- eret
-  
+
   # constraints
   constr <- list(w >= lower_limits, w <= upper_limits, sum(w) == 1, te2 <= max_risk^2)
-  
+
   # Solve
   prob <- Problem(Maximize(obj), constr)
   result <- solve(prob)
-  
+
   wgts <- list(result$getValue(w))
   rownames(wgts[[1]]) <- names(asset_returns)
-  
+
   return(c("Weights" = wgts, "ExpectReturn" =result$getValue(eret), "Stdev" = sqrt(result$getValue(te2)), "OptStatus" = result$status))
 }
 
@@ -672,34 +683,34 @@ oldmarkowitz <- function(asset_returns, expected_returns, lower_limits, upper_li
   #' @examples
   #'   result <- oldmarkowitz(asset_returns, rep(0, nasset), rep(.3, nasset), 0.5)
   #'   weights <- result$getValue(w)
-  
+
   nasset <- ncol(asset_returns)
-  
+
   # covariance matrix of returns
   covar <- cov(asset_returns)
-  
+
   # Variables
   w <- Variable(ncol(asset_returns))
-  
+
   # Expected (excess) return
   eret <- t(expected_returns %*% w)
-  
+
   # Squared tracking error
   te2 <- quad_form(w, covar)
-  
+
   # Objective: Maximize expected returns
   obj <- eret - gamma*te2
-  
+
   # constraints
   constr <- list(w >= lower_limits, w <= upper_limits, sum(w) == 1)
-  
+
   # Solve
   prob <- Problem(Maximize(obj), constr)
   result <- solve(prob)
-  
+
   wgts <- list(result$getValue(w))
   rownames(wgts[[1]]) <- names(asset_returns)
-  
+
   return(c("Weights" = wgts, "ExpectReturn" =result$getValue(eret), "Stdev" = sqrt(result$getValue(te2)), "OptStatus" = result$status))
 }
 
@@ -722,12 +733,22 @@ max_diversification <- function(asset_returns, lower_limits, upper_limits) {
   #' @examples
   #'   rp <- max_diversification(asset_returns, rep(0, nasset), rep(.3, nasset))
   #'   weights <- rp$solution
-  
+
   nasset <- ncol(asset_returns)
   # covariance matrix for asset_returns and assuming no correlation
   covar <- cov(asset_returns)
   covar0 <- diag(covar)
-  
+
+  # NEW
+  # Check equality constraints
+  for(i in 1:length(lower_limits)) {
+    if(lower_limits[i]==upper_limits[i]) {
+      lower_limits[i] = lower_limits[i] - 1e-5
+      upper_limits[i] = upper_limits[i] + 1e-5
+    }
+  }
+  # NEW END
+
   # Objective function
   obj <- function(w) {
     pf_variance <- w %*% covar %*% w
@@ -735,22 +756,83 @@ max_diversification <- function(asset_returns, lower_limits, upper_limits) {
     diversification_ratio <- log(pf_variance0) - log(pf_variance)
     return(diversification_ratio)
   }
-  
+
   # inequality constraints
   eval_g_ineq <- function(w) {
     constr <- c(sum(w) - 1, 1-sum(w))
     return(list("constraints" = constr, "jacobian" = c(rep(1, nasset), rep(-1, nasset))))
   }
-  
+
   # initial values
   w0 <- rep(1/nasset, nasset)
   for(i in 1:length(w0)) {
     w0[i] <- min(max(w0[i], lower_limits[i]), upper_limits[i])
   }
-  
+
   # options & solve
   opts <- list("algorithm" = "NLOPT_LN_COBYLA", "maxeval" = 10000000)
-  
+
+  res <- nloptr(x0=w0, eval_f = obj, lb = lower_limits, ub = upper_limits, eval_g_ineq = eval_g_ineq, opts = opts)
+  if(abs(sum(res$solution)-1) > 1e-6)
+    res$status <- -10
+  return(res)
+}
+
+max_sharpe <- function(asset_returns, expected_returns, lower_limits, upper_limits) {
+  #'
+  #' @title Maximum sharpe ratio subject to holdings constraints
+  #'
+  #' @description Maximum sharpe ratio
+  #'
+  #' @usage res <- max_sharpe(asset_returns, expected_returns, lower_limits, upper_limits)
+  #'
+  #' @param asset_returns A data frame with times (down) and assets (across)
+  #' @param expected_returns A data with asset expected returns
+  #' @param lower_limits A list of lower bounds for asset holdings (typically rep(0, nasset))
+  #' @param upper_limits A list of upper bounds for asset holdings (eg., rep(0.2, nasset))
+  #'
+  #' @return An nloptr object holding the solution
+  #'
+  #' @examples
+  #'   rp <- max_sharpe(asset_returns, expected_returns, rep(0, nasset), rep(.3, nasset))
+  #'   weights <- rp$solution
+
+  nasset <- ncol(asset_returns)
+  # covariance matrix for asset_returns and assuming no correlation
+  covar <- cov(asset_returns)
+  covar0 <- diag(covar)
+
+  # Check equality constraints
+  for(i in 1:length(lower_limits)) {
+    if(lower_limits[i]==upper_limits[i]) {
+      lower_limits[i] = lower_limits[i] - 1e-5
+      upper_limits[i] = upper_limits[i] + 1e-5
+    }
+  }
+
+  # Objective function
+  obj <- function(w) {
+    exp_ret <- expected_returns %*% w
+    pf_variance <- w %*% covar %*% w
+    sharpe <- exp_ret/sqrt(pf_variance)
+    return(-sharpe)
+  }
+
+  # inequality constraints
+  eval_g_ineq <- function(w) {
+    constr <- c(sum(w) - 1, 1-sum(w))
+    return(list("constraints" = constr, "jacobian" = c(rep(1, nasset), rep(-1, nasset))))
+  }
+
+  # initial values
+  w0 <- rep(1/nasset, nasset)
+  for(i in 1:length(w0)) {
+    w0[i] <- min(max(w0[i], lower_limits[i]), upper_limits[i])
+  }
+
+  # options & solve
+  opts <- list("algorithm" = "NLOPT_LN_COBYLA", "maxeval" = 10000000)
+
   res <- nloptr(x0=w0, eval_f = obj, lb = lower_limits, ub = upper_limits, eval_g_ineq = eval_g_ineq, opts = opts)
   if(abs(sum(res$solution)-1) > 1e-6)
     res$status <- -10
@@ -773,29 +855,29 @@ equal_weights <- function(asset_returns, lower_limits, upper_limits) {
   #' @examples
   #'   rp <- equal_weights(asset_returns, rep(0, nasset), rep(.3, nasset))
   #'   weights <- result$getValue(w)
-  
+
   nasset <- ncol(asset_returns)
-  
+
   # Variables
   w <- Variable(nasset)
-  
+
   equalweights <- rep(1/nasset, nasset)
-  
+
   slack <- w - equalweights
-  
+
   # Objective: Minimize sum of squared slacks
   obj <- sum(square(slack))
-  
+
   # constraints
   constr <- list(w >= lower_limits, w <= upper_limits, sum(w) == 1)
-  
+
   # Solve
   prob <- Problem(Minimize(obj), constr)
   result <- solve(prob)
-  
+
   wgts <- list(result$getValue(w))
   rownames(wgts[[1]]) <- names(asset_returns)
-  
+
   return(c("Weights" = wgts, "OptStatus" = result$status))
 }
 
@@ -815,7 +897,7 @@ get_portfolio_returns <- function(returns, weights) {
   #' @examples
   #'   ret <- get_portfolio_returns(asset_returns, portfolio_weights)
   #'
-  
+
   df <- returns[,1]
   rets <- returns %*% weights
   df[,1] <- rets
@@ -862,7 +944,7 @@ get_portfolio_drawdowns <- function(portfolio_wealth) {
   #' dd <- get_portfolio_drawdowns(pf_wealth)
   #' max_drawdown <- 1 - min(dd)
   #'
-  
+
   dd <- portfolio_wealth
   max <- portfolio_wealth[[1]]
   for(i in 1:length(portfolio_wealth)) {
@@ -908,7 +990,7 @@ portfolio_risk_contributions <- function(weights, asset_returns) {
   return(contrib)
 }
 
-################ UNIFICATION OF ALGORITHM RETURNS ######################### 
+################ UNIFICATION OF ALGORITHM RETURNS #########################
 get_portfolio_optimization_weights <- function(model, result, variablenames = NULL) {
   # Get the solution optimal weights.
   # The format of these depends on the model used (input), since this may be covered by CVXR or NLOPTR.
@@ -929,7 +1011,7 @@ get_portfolio_optimization_weights <- function(model, result, variablenames = NU
 
 get_portfolio_optimization_status <- function(model, result) {
   # Return "optimal" of something else
-  if(model == 'Markowitz' | model == "MeanVar" | model == "EW") 
+  if(model == 'Markowitz' | model == "MeanVar" | model == "EW")
     return(result$OptStatus)
   else
     res <- switch(as.character(result$status),
@@ -940,7 +1022,74 @@ get_portfolio_optimization_status <- function(model, result) {
                   "4" = "within tolerances (4)",
                   "5" = "maximum iterations reached",
                   "6" = "maximum time limit reached")
-  
+
   return(res)
 }
 
+### IN THE WORKS - INTENDED TO BE MORE GENERAL WHEN WE HAVE INTERNATIONAL ASSETS
+do_currency_conversion <- function(fund_ISO, target_ISO, fund_series, all_exchange_rates) {
+  # convert fund_series denominated in fund_ISO currency to  series denominated in target_ISO currency
+  # fund_series is a data frame with two named columns : date and price
+
+  # To save time, if fund and target ISO are the same, return fund_returns
+  if(fund_ISO == target_ISO)
+    return(fund_series)
+
+  # first compute cross: (target_ISO ER/fund_ISO ER) ...
+  # dividing by fund_ISO ER makes return series in USD
+  # multiplying by target_ISO ER makes it target currency
+
+  # it is assumed that both fund_ISO and target_ISO are valid ISos
+
+  # Exchange rates for fund_ISO vs USD (for all daily data)
+  fundISO_logical <- which(as.character(exchangeRates$ISO) == fund_ISO) # Pick records for fund_ISO
+  fundISO_ExchangeRates <- exchangeRates[fundISO_logical,]
+
+  # Get relevant dates for conversion into USD - not necessarily daily
+  seldates <- as.Date(fund_series$date, "%m/%d/%Y")
+  logicalDates <- which(as.Date(fundISO_ExchangeRates$date, "%m/%d/%Y") %in% seldates)
+  to_USD_exchange_rates <- fundISO_ExchangeRates[logicalDates,]
+
+  # HERE WE ASSUME THAT exchange rates have a full date overlap (ie., no problem with holidays)
+  targetISO_logical <- which(exchangeRates$ISO == target_ISO) # Pick records for fund_ISO
+  targetISO_ExchangeRates <- exchangeRates[targetISO_logical,]
+  to_target_exchange_rates <- targetISO_ExchangeRates[logicalDates,]
+
+  # currency cross
+  cross <- to_target_exchange_rates
+  cross$Price <- to_target_exchange_rates$Price/to_USD_exchange_rates$Price
+}
+
+get_currency_cross <- function(fund_ISO, target_ISO, dates) {
+  # convert fund_series denominated in fund_ISO currency to  series denominated in target_ISO currency
+  # fund_series is a data frame with two named columns : date and price
+
+  # To save time, if fund and target ISO are the same, return fund_returns
+  if(fund_ISO == target_ISO)
+    return(fund_series)
+
+  # first compute cross: (target_ISO ER/fund_ISO ER) ...
+  # dividing by fund_ISO ER makes return series in USD
+  # multiplying by target_ISO ER makes it target currency
+
+  # it is assumed that both fund_ISO and target_ISO are valid ISos
+
+  # Exchange rates for fund_ISO vs USD (for all daily data)
+  fundISO_logical <- which(as.character(exchangeRates$ISO) == fund_ISO) # Pick records for fund_ISO
+  fundISO_ExchangeRates <- exchangeRates[fundISO_logical,]
+
+  # Get relevant dates for conversion into USD - not necessarily daily
+  seldates <- as.Date(dates, "%m/%d/%Y")
+  logicalDates <- which(as.Date(fundISO_ExchangeRates$date, "%m/%d/%Y") %in% seldates)
+  to_USD_exchange_rates <- fundISO_ExchangeRates[logicalDates,]
+
+  # HERE WE ASSUME THAT exchange rates have a full date overlap (ie., no problem with holidays)
+  targetISO_logical <- which(exchangeRates$ISO == target_ISO) # Pick records for fund_ISO
+  targetISO_ExchangeRates <- exchangeRates[targetISO_logical,]
+  to_target_exchange_rates <- targetISO_ExchangeRates[logicalDates,]
+
+  # currency cross
+  cross <- to_target_exchange_rates
+  cross$Price <- to_target_exchange_rates$Price/to_USD_exchange_rates$Price
+  return(cross)
+}

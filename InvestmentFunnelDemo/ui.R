@@ -3,7 +3,7 @@ shinyUI(
   dashboardPage(
     dashboardHeader(title = "Investment Funnel"),
     
-####################################### Sidebar content #######################################
+    ####################################### Sidebar content #######################################
     dashboardSidebar(
       
       sidebarMenu(
@@ -19,7 +19,7 @@ shinyUI(
     
     
     
-####################################### MENU TAB #######################################
+    ####################################### MENU TAB #######################################
     dashboardBody(
       tabItems(
         tabItem(tabName = "menu",
@@ -63,7 +63,7 @@ shinyUI(
         ), #menu
         
         
-####################################### Screening  #######################################
+        ####################################### Screening  #######################################
         tabItem(tabName = "Screening",
                 fluidRow(
                   column(12, align="center", offset = 3,
@@ -129,7 +129,7 @@ shinyUI(
                 
                 br(),
                 
-                box(sliderInput("yearsOfExistence", "Years of Exsistence:", min = 0, max = 30, value = c(0,30), post="y"),
+                box(sliderInput("yearsOfExistence", "Years of Exsistence:", min = 0, max = 30, value = c(5,30), post="y"),
                     solidHeader = T,
                     collapsible = T,
                     collapsed = F,
@@ -165,37 +165,37 @@ shinyUI(
                     collapsed = T,
                     width = 12,
                     title = "Expenses, Liquidity & Yield", status = "primary")),
-            
-####################################### Analysis preferences  #######################################
-
+        
+        ####################################### Analysis preferences  #######################################
+        
         
         tabItem(tabName = "analysisPreferences",
-
+                
                 br(),
                 
-                  fluidRow(
-                    box(
-                      h2("Choose analysis parameters"),
-                      
-                      hr(),
-                      
-                      
-                      column(width = 3, radioButtons("dataFrequency", label = h3("Data Frequency"),
+                fluidRow(
+                  box(
+                    h2("Choose analysis parameters"),
+                    
+                    hr(),
+                    
+                    
+                    column(width = 3, radioButtons("dataFrequency", label = h3("Data Frequency"),
                                                    choices = list("Daily" = 'daily',
                                                                   "Weekly" = 'weekly',
                                                                   "Monthly" = 'monthly'),
-                                                              selected = 'monthly')),
-                      # hack here - use db instead...
-                      column(width = 3, selectInput("dataCurrency", label = h3("Currency"),
-                                                     choices = list("USD", "EUR", "GBP", "JPY", "SEK", "DKK", "NOK", 
-                                                                    "CHF", "AED", "AUD", "BRL", "CAD", "CNH", "EGP", 
-                                                                    "HKD", "HUF", "IDR", "ILS", "INR", "ISK", "KRW",
-                                                                    "MXN", "NGN", "NZD", "PHP", "PLN", "RON", "RUB",
-                                                                    "SAR", "SGD", "THB", "TRY", "TWD", "VND", "ZAR"), 
-                                                    selected = "USD")),
-                      column(width = 3, numericInput("dataUseYears", label = h3("Use Years"), value = 10, 
-                                                     min = 1, max = 20)),
-                      
+                                                   selected = 'monthly')),
+                    # hack here - use db instead...
+                    column(width = 3, selectInput("dataCurrency", label = h3("Currency"),
+                                                  choices = list("USD", "EUR", "GBP", "JPY", "SEK", "DKK", "NOK", 
+                                                                 "CHF", "AED", "AUD", "BRL", "CAD", "EGP", 
+                                                                 "HKD", "HUF", "IDR", "ILS", "INR", "ISK", "KRW",
+                                                                 "MXN", "NGN", "NZD", "PHP", "PLN", "RON", "RUB",
+                                                                 "SAR", "SGD", "THB", "TRY", "TWD", "VND", "ZAR"), 
+                                                  selected = "USD")),
+                    column(width = 3, numericInput("dataUseYears", label = h3("Use Years"), value = 10, 
+                                                   min = 1, max = 20)),
+                    
                     solidHeader = T,
                     collapsible = F,
                     collapsed = F,
@@ -203,14 +203,14 @@ shinyUI(
                     title = "Analysis parameters", 
                     status = "primary", 
                     align =  "center") #box
-              ) # fluidrow
-              ), #tab preferences
+                ) # fluidrow
+        ), #tab preferences
         
-
-####################################### Clustering  #######################################
+        
+        ####################################### Clustering  #######################################
         
         tabItem(tabName = "clustering",
-
+                
                 box(
                   h2("Choose specification for Hierarchical clustering"),
                   
@@ -221,8 +221,9 @@ shinyUI(
                   
                   fluidRow(
                     column(width = 3, radioButtons("corMethod", label = h3("Correlation Coefficient"),
-                                                   choices = list("Pearson" = 'pearson',
-                                                                  "Spearman" = 'spearman'))),
+                                                   choices = list("Spearman" = 'spearman',
+                                                                  "Pearson" = 'pearson'
+                                                                  ))),
                     
                     column(width = 3, radioButtons("distMetric", label = h3("Distance Metric"),
                                                    choices = list("1-abs(corr)" = 'A',
@@ -230,18 +231,19 @@ shinyUI(
                                                                   "abs(1-corr)" = 'C'))),
                     column(width = 3,
                            radioButtons("linkage", label = h3("Linkage"),
-                                        choices = list("Single" = 'single',
+                                        choices = list("Ward.D" = 'wardD',
+                                                       "Single" = 'single',
                                                        "Complete" = 'complete',
                                                        "Centroid" = 'centroid',
                                                        "Median" = 'median',
-                                                       "Ward.D" = 'wardD',
                                                        "Ward.D2" = 'wardD2'))),
                     column(width = 3,
                            radioButtons("selectionCriteria", label = h3("Selection Criteria"),
-                                        choices = list("Highest Return" = 'highestReturn',
-                                                       "Minimum Standard Deviation" = 'minimumStd',
-                                                       "Highest Sharpe Ratio" = 'highestSharpe',
-													   "Most Representive" = 'mostRepresentive')))
+                                        choices = list("Most Representive" = 'mostRepresentive',
+                                                       "Highest Historical Return" = 'highestReturn',
+                                                       "Minimum Historical Standard Deviation" = 'minimumStd',
+                                                       "Highest Historical Sharpe Ratio" = 'highestSharpe'
+                                                       ))) 
                   ), #fluidrow
                   
                   hr(),
@@ -256,168 +258,194 @@ shinyUI(
                   width = 12,
                   title = "Clustering", status = "primary"
                 ) #box
-              ), # tab clustering
+        ), # tab clustering
+        
+        ######################## Results from Clustering ################################
+        
+        tabItem(tabName = "clusteringresults",
+                box(
+                  h3("Clustering"),
+                  fluidRow(
+                    column(width = 6, plotOutput("plotResultAssets", height = '400px', width = '100%')),
+                    column(width = 6, plotOutput("plotClusterPieChart", height = '400px', width = '100%'))
+                  ),
+                  
+                  br(),
+                  
+                  fluidRow(
+                    column(width = 9, tableOutput('tableClustering'))
+                  ),
+                  
+                  fluidRow(
+                    column(width = 3, plotOutput("plotClusteringAssetClass", height = '300px', width = '100%')),
+                    column(width = 3, plotOutput("plotClusteringRegion", height = '300px', width = '100%')),
+                    column(width = 3, plotOutput("plotClusteringGeography", height = '300px', width = '100%')),
+                    column(width = 3, plotOutput("plotClusteringFocus", height = '300px', width = '100%'))
+                  ),
+                  
+                  fluidRow(
+                    column(width = 4, plotOutput("plotClusterCompareReturn", height = '300px', width = '100%')),
+                    column(width = 4, plotOutput("plotClusterCompareStd", height = '300px', width = '100%')),
+                    column(width = 4, plotOutput("plotClusterCompareSR", height = '300px', width = '100%'))
+                  ),
+                  
+                  hr(),
+                  
+                  solidHeader = T,
+                  collapsible = F,
+                  collapsed = F,
+                  width = 12,
+                  title = "Clustering Results", status = "primary"
+                ) #box
+        ), #tab clusteringresults
+        
+        
+        ####################### PORTFOLIO OPTIMIZATION MODELS #############################
 
-######################## Results from Clustering ################################
-    
-    tabItem(tabName = "clusteringresults",
-        box(
-          h3("Clustering"),
-          fluidRow(
-            column(width = 6, plotOutput("plotResultAssets", height = '400px', width = '100%')),
-            column(width = 6, plotOutput("plotClusterPieChart", height = '400px', width = '100%'))
-          ),
-          
-          br(),
-          
-          fluidRow(
-            column(width = 9, tableOutput('tableClustering'))
-          ),
-          
-          fluidRow(
-            column(width = 3, plotOutput("plotClusteringAssetClass", height = '300px', width = '100%')),
-            column(width = 3, plotOutput("plotClusteringRegion", height = '300px', width = '100%')),
-            column(width = 3, plotOutput("plotClusteringGeography", height = '300px', width = '100%')),
-            column(width = 3, plotOutput("plotClusteringFocus", height = '300px', width = '100%'))
-          ),
-          
-          fluidRow(
-            column(width = 4, plotOutput("plotClusterCompareReturn", height = '300px', width = '100%')),
-            column(width = 4, plotOutput("plotClusterCompareStd", height = '300px', width = '100%')),
-            column(width = 4, plotOutput("plotClusterCompareSR", height = '300px', width = '100%'))
-          ),
-          
-          hr(),
-          
-          solidHeader = T,
-          collapsible = F,
-          collapsed = F,
-          width = 12,
-          title = "Clustering Results", status = "primary"
-        ) #box
-  ), #tab clusteringresults
-
+        tabItem(tabName = "optimization",
+                box(
+                  fluidRow(
+                    column(width = 6,
+                           radioButtons("modelChoices",
+                                        label = h3("Select Model"),
+                                        choices = list("Constrained Markowitz" = "Markowitz",
+                                                       "Risk Parity" = "riskParity",
+                                                       "Mean-Variance" = "MeanVar",
+                                                       "Equal-weights" = "EW",
+                                                       "Max Diversification" = "MaxDiv",
+                                                       "Max Sharpe" = "MaxSharpe"))
+                    ),
+                    column(width = 6, uiOutput("ui")),
+                    column(width = 3,
+                           numericInput("maxrisk", label = h3("Maximum risk, % (If appropriate)"), value = 10, min = 0))
+                  ),  #fluidrow
+                  
+                  column(width = 8, align="center", offset = 2,actionButton("optimizeButton", "Optimize!")),
+                  solidHeader = T,
+                  collapsible = T,
+                  collapsed = F,
+                  width = 12,
+                  title = "Optimization Models", status = "primary"
+                ),  #box
+                br(),
+                box(
+                  rHandsontableOutput("optimizationbounds", width = 350),
+                  solidHeader = T,
+                  collapsible = T,
+                  collapsed = F,
+                  width = 12,
+                  title = "Optimization Bounds", status = "primary"
+                ),
+                box(
+                  textOutput("optimizationboundsmessage"),
+                  solidHeader = T,
+                  collapsible = T,
+                  collapsed = F,
+                  width = 12,
+                  title = "Messages", status = "primary"
+                ),
                 
-####################### PORTFOLIO OPTIMIZATION MODELS #############################
-  tabItem(tabName = "optimization",
-    box(
-      fluidRow(
-        column(width = 6,
-          radioButtons("modelChoices",
-          label = h3("Select Model"),
-          choices = list("Constrained Markowitz" = "Markowitz",
-                         "Risk Parity" = "riskParity",
-                         "Mean-Variance" = "MeanVar",
-                         "Equal-weights" = "EW",
-                         "Max Diversification" = "MaxDiv"))
-                        ),
-              column(width = 6, uiOutput("ui")),
-              column(width = 3,
-                numericInput("maxrisk", label = h3("Maximum risk, % (If appropriate)"), value = 10, min = 0))
-      ),  #fluidrow
-
-      column(width = 8, align="center", offset = 2,actionButton("optimizeButton", "Optimize!")),
-      solidHeader = T,
-      collapsible = T,
-      collapsed = F,
-      width = 12,
-      title = "Optimization Models", status = "primary"
-    ),  #box
-    br(),
-    box(
-      rHandsontableOutput("optimizationbounds", width = 350),
-      solidHeader = T,
-      collapsible = T,
-      collapsed = F,
-      width = 12,
-      title = "Optimization Bounds", status = "primary"
-    ),
-    box(
-      textOutput("optimizationboundsmessage"),
-      solidHeader = T,
-      collapsible = T,
-      collapsed = F,
-      width = 12,
-      title = "Messages", status = "primary"
-    )
-  ), #tab optimization
-       
-####################################### Optimization Results  #######################################
+                ######## DETHER    
+                box(
+                  textOutput("optimizationstatusmessage"),
+                  solidHeader = T,
+                  collapsible = T,
+                  collapsed = F,
+                  width = 12,
+                  title = "Solution status", status = "primary"
+                )
+                
+        ), #tab optimization
         
-  tabItem(tabName = "optimizationresults",
-    box(
-      h3("Wealth and drawdowns"),
-      fluidRow(
-        column(width = 6, plotOutput("plotPortfolioWealth", height = '300px', width = '100%')),
-        column(width = 6, plotOutput("plotPortfolioDrawdowns", height = '300px', width = '100%'))
-      )
-    ) ,
-    br(),
-              
-    fluidRow(column(width = 9, tableOutput('tablePfStats')) ),
-    br(),
-    fluidRow(column(width = 9, tableOutput('tablePfSecurities'))),
+        ####################################### Optimization Results  #######################################
 
-    br(),
-    
-    box(
-      h3("Asset and risk composition"),
-      fluidRow(column(width = 6, plotOutput("plotPortfolioComposition", height = '400px', width = '100%')),
-               column(width = 6, plotOutput("plotPortfolioRiskComposition", height = '400px', width = '400%'))
-      )
-    )
-  )
-
+        tabItem(tabName = "optimizationresults",
+                box(
+                  h3("Optimization results"),
+                  fluidRow(
+                    column(width = 6, plotOutput("plotPortfolioWealth", height = '300px', width = '100%')),
+                    column(width = 6, plotOutput("plotPortfolioDrawdowns", height = '300px', width = '100%'))
+                  ),
+                  br(),
                   
-#                  fluidRow(
-#                    column(width = 3, plotOutput("plotClusteringAssetClass", height = '300px', width = '100%')),
-#                    column(width = 3, plotOutput("plotClusteringRegion", height = '300px', width = '100%')),
-#                    column(width = 3, plotOutput("plotClusteringGeography", height = '300px', width = '100%')),
-#                    column(width = 3, plotOutput("plotClusteringFocus", height = '300px', width = '100%'))
-#                  ),
+                  fluidRow(column(width = 12, tableOutput('tablePfStats')) ),
+                  br(),
+                  fluidRow(column(width = 12, tableOutput('tablePfSecurities'))),
                   
-#                  fluidRow(
-#                    column(width = 4, plotOutput("plotClusterCompareReturn", height = '300px', width = '100%')),
-#                    column(width = 4, plotOutput("plotClusterCompareStd", height = '300px', width = '100%')),
-#                    column(width = 4, plotOutput("plotClusterCompareSR", height = '300px', width = '100%'))
-#                  ),
+                  br(),
+                  fluidRow(column(width = 6, plotOutput("plotPortfolioComposition", height = '400px', width = '100%')),
+                           column(width = 6, plotOutput("plotPortfolioRiskComposition", height = '400px', width = '100%'))
+                  ), 
+                  fluidRow(
+                    column(width = 6, plotOutput("plotPortfolioAllocationByAssetClass", height = '400px', width = '100%')),
+                    column(width = 6, plotOutput("plotPortfolioAllocationByRegion", height = '400px', width = '100%'))
+                  ),
+                  fluidRow(
+                    column(width = 6, plotOutput("plotPortfolioRiskByAssetClass", height = '400px', width = '100%')),
+                    column(width = 6, plotOutput("plotPortfolioRiskByRegion", height = '400px', width = '100%'))
+                  ), 
+                  hr(),
                   
-#                  hr(),
+                  solidHeader = T,
+                  collapsible = F,
+                  collapsed = F,
+                  width = 20,
+                  title = "Optimization Results", status = "primary"
                   
-                  ###### Backtest ######
-                  # h3("Equal-Weigths"),
-                  # hr(),
-                  #
-                  # h3("Mean-Variance / Markowitz"),
-                  # fluidRow(
-                  #   column(width = 6, plotOutput("plotEfficientFrontier", height = '400px', width = '100%')),
-                  #   column(width = 6, tableOutput('tableEfficientFrontier'))
-                  #
-                  # hr(),
-                  # h3("Value-at-Risk / VaR"),
-                  # hr(),
-                  # h3("Conditional-Value-at-Risk / CVaR"),
-                  # hr(),
                   
-#                  h3("Backtests"),
-#                  fluidRow(
-##                    column(width = 6, plotOutput("randomBacktestPlot", height = '400px', width = '100%')),
-#                    column(width = 6, plotOutput("xxx", height = '400px', width = '100%'))
-#                  ),
-#                  
-#                  hr(),
-                  
-#                  solidHeader = T,
-#                  collapsible = F,
-#                  collapsed = F,
-#                  width = 12,
-#                  title = "Clustering Results", status = "primary"
-#                )
-#        )
-        
-#      ) #box
-#    ) #tab optimizationresults
-  ) #tabitems
-) #dashboardbody
-) #dashboardpage
+                ) #box
+        )  #tabitem
+      ) # tabitems
+      
+      
+      #                  fluidRow(
+      #                    column(width = 3, plotOutput("plotClusteringAssetClass", height = '300px', width = '100%')),
+      #                    column(width = 3, plotOutput("plotClusteringRegion", height = '300px', width = '100%')),
+      #                    column(width = 3, plotOutput("plotClusteringGeography", height = '300px', width = '100%')),
+      #                    column(width = 3, plotOutput("plotClusteringFocus", height = '300px', width = '100%'))
+      #                  ),
+      
+      #                  fluidRow(
+      #                    column(width = 4, plotOutput("plotClusterCompareReturn", height = '300px', width = '100%')),
+      #                    column(width = 4, plotOutput("plotClusterCompareStd", height = '300px', width = '100%')),
+      #                    column(width = 4, plotOutput("plotClusterCompareSR", height = '300px', width = '100%'))
+      #                  ),
+      
+      #                  hr(),
+      
+      ###### Backtest ######
+      # h3("Equal-Weigths"),
+      # hr(),
+      #
+      # h3("Mean-Variance / Markowitz"),
+      # fluidRow(
+      #   column(width = 6, plotOutput("plotEfficientFrontier", height = '400px', width = '100%')),
+      #   column(width = 6, tableOutput('tableEfficientFrontier'))
+      #
+      # hr(),
+      # h3("Value-at-Risk / VaR"),
+      # hr(),
+      # h3("Conditional-Value-at-Risk / CVaR"),
+      # hr(),
+      
+      #                  h3("Backtests"),
+      #                  fluidRow(
+      ##                    column(width = 6, plotOutput("randomBacktestPlot", height = '400px', width = '100%')),
+      #                    column(width = 6, plotOutput("xxx", height = '400px', width = '100%'))
+      #                  ),
+      #                  
+      #                  hr(),
+      
+      #                  solidHeader = T,
+      #                  collapsible = F,
+      #                  collapsed = F,
+      #                  width = 12,
+      #                  title = "Clustering Results", status = "primary"
+      #                )
+      #        )
+      
+      #      ) #box
+      #    ) #tab optimizationresults
+    ) #dashboardbody
+  ) #dashboardpage
 ) #app
