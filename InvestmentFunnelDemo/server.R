@@ -568,7 +568,7 @@ shinyServer(function(input, output) {
       maxdd <- 100*(1-min(dds))
 
       eret <- 0
-      DF <- optidata()
+      DF <- DF = hot_to_r(input$optimizationbounds)
 
       # expected returns
       expret <- DF$ExpectedReturns
