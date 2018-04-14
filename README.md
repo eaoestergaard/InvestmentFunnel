@@ -1,3 +1,3 @@
 # InvestmentFunnelDemo
 
-https://theinvestmentfunnelproject.shinyapps.io/investmentfunneldemo/
+https://theinvestmentfunnelproject.shinyapps.io/investmentfunnel/
